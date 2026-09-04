@@ -31,23 +31,6 @@ export default function handler(req, res) {
   const rawO2 = parseFloat((oStart + oStepCount * oStep).toFixed(2));
 
   function formatValue(num, unit = '') {
-    // 1. For numbers under 1,000, enforce 2 decimals
-    if (num < 1000) {
-      let strNum = Number(num).toLocaleString('fullwide', {
-        useGrouping: false, 
-        minimumFractionDigits: 2, 
-        maximumFractionDigits: 2
-      });
-      let allowedLen = 6 - unit.length;
-      
-      if (strNum.length <= allowedLen) return strNum + unit;
-      
-      let truncated = strNum.substring(0, allowedLen);
-      if (truncated.endsWith('.')) truncated = truncated.slice(0, -1);
-      return truncated + unit;
-    }
-
-    // 2. For k, L, Cr: Maintain decimals up to the physical 6-character limit
     let val = num;
     let abbr = '';
 
@@ -55,19 +38,14 @@ export default function handler(req, res) {
     else if (val >= 100000) { val = val / 100000; abbr = 'L'; }
     else if (val >= 1000) { val = val / 1000; abbr = 'k'; }
 
-    // Request up to 4 decimals internally to capture micro-updates
-    let strNum = Number(val).toLocaleString('fullwide', {
-      useGrouping: false, 
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 4 
-    });
+    // This safely keeps a maximum of 2 decimals and automatically drops trailing zeros
+    let strNum = parseFloat(val.toFixed(2)).toString();
 
     let maxAvailable = 6 - abbr.length - unit.length;
     let finalStr = strNum.substring(0, maxAvailable);
     
-    if (finalStr.endsWith('.')) {
-      finalStr = finalStr.slice(0, -1);
-    }
+    // If the 6-character truncation slices a number and leaves a trailing "." or "0", this cleans it up
+    finalStr = parseFloat(finalStr).toString();
     
     return finalStr + abbr + unit;
   }
