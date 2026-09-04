@@ -27,15 +27,19 @@ export default function handler(req, res) {
   const cStepCount = Math.floor(elapsedSec / cIntSec);
   const oStepCount = Math.floor(elapsedSec / oIntSec);
 
-  // Calculate the raw internal numbers
   const rawCO2 = parseFloat((cStart + cStepCount * cStep).toFixed(2));
   const rawO2 = parseFloat((oStart + oStepCount * oStep).toFixed(2));
 
-  // Dynamic formatter that handles both with and without units
   function formatValue(num, unit = '') {
+    // 1. For numbers under 1,000, enforce 2 decimals
     if (num < 1000) {
-      let strNum = Number(num).toLocaleString('fullwide', {useGrouping: false, maximumFractionDigits: 2});
+      let strNum = Number(num).toLocaleString('fullwide', {
+        useGrouping: false, 
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2
+      });
       let allowedLen = 6 - unit.length;
+      
       if (strNum.length <= allowedLen) return strNum + unit;
       
       let truncated = strNum.substring(0, allowedLen);
@@ -43,16 +47,27 @@ export default function handler(req, res) {
       return truncated + unit;
     }
 
+    // 2. For k, L, Cr: Maintain decimals up to the physical 6-character limit
     let val = num;
     let abbr = '';
 
-    if (val >= 10000000) { val = Math.floor(val / 10000000); abbr = 'Cr'; }
-    else if (val >= 100000) { val = Math.floor(val / 100000); abbr = 'L'; }
-    else if (val >= 1000) { val = Math.floor(val / 1000); abbr = 'k'; }
+    if (val >= 10000000) { val = val / 10000000; abbr = 'Cr'; }
+    else if (val >= 100000) { val = val / 100000; abbr = 'L'; }
+    else if (val >= 1000) { val = val / 1000; abbr = 'k'; }
 
-    let str = val.toString();
+    // Request up to 4 decimals internally to capture micro-updates
+    let strNum = Number(val).toLocaleString('fullwide', {
+      useGrouping: false, 
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4 
+    });
+
     let maxAvailable = 6 - abbr.length - unit.length;
-    let finalStr = str.substring(0, maxAvailable);
+    let finalStr = strNum.substring(0, maxAvailable);
+    
+    if (finalStr.endsWith('.')) {
+      finalStr = finalStr.slice(0, -1);
+    }
     
     return finalStr + abbr + unit;
   }
