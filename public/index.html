@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Carbelim | LED Dynamic Data Generator</title>
+  <style>
+    :root {
+      --bg-primary: #1A3626;
+      --card-bg: #224230;
+      --accent-gold: #D4AF37;
+      --text-cream: #FDFBF7;
+      --text-muted: #C5CEB8;
+      --border-color: rgba(212, 175, 55, 0.3);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-cream);
+      font-family: 'Merriweather', Georgia, serif;
+      padding: 30px 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 35px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 20px;
+    }
+
+    header h1 {
+      color: var(--accent-gold);
+      font-size: 28px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-top: 5px;
+      letter-spacing: 0.5px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-bottom: 25px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 20px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+    }
+
+    .card h2 {
+      font-size: 16px;
+      color: var(--accent-gold);
+      margin-bottom: 15px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px 12px;
+      background: #14291D;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      color: var(--text-cream);
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .live-val {
+      font-size: 38px;
+      font-weight: bold;
+      color: var(--accent-gold);
+      text-align: center;
+      margin: 10px 0;
+    }
+
+    .btn {
+      background: var(--accent-gold);
+      color: #1A3626;
+      border: none;
+      padding: 10px 18px;
+      font-weight: bold;
+      font-size: 13px;
+      border-radius: 4px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: opacity 0.2s;
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    .btn:hover { opacity: 0.9; }
+
+    .url-box {
+      background: #122117;
+      padding: 12px;
+      border-radius: 4px;
+      border: 1px dashed var(--border-color);
+      word-break: break-all;
+      font-family: monospace;
+      font-size: 12px;
+      color: var(--accent-gold);
+      margin-top: 10px;
+    }
+
+    pre {
+      background: #122117;
+      padding: 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: var(--text-cream);
+      overflow-x: auto;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>Carbelim Pvt Limited</h1>
+    <p>Huidu LED Dynamic CO₂ & O₂ Stream Engine</p>
+  </header>
+
+  <div class="grid">
+    <!-- Configuration -->
+    <div class="card">
+      <h2>Parameters</h2>
+      <div class="form-group">
+        <label>Update Interval (Seconds)</label>
+        <input type="number" id="interval" value="3" min="0.5" step="0.5" />
+      </div>
+      <div class="form-group">
+        <label>CO₂ Start Value (%)</label>
+        <input type="number" id="co2Start" value="0.0" step="0.1" />
+      </div>
+      <div class="form-group">
+        <label>CO₂ Step Increment (%)</label>
+        <input type="number" id="co2Step" value="0.2" step="0.1" />
+      </div>
+      <div class="form-group">
+        <label>O₂ Start Value (%)</label>
+        <input type="number" id="o2Start" value="20.9" step="0.1" />
+      </div>
+      <div class="form-group">
+        <label>O₂ Step Increment (%)</label>
+        <input type="number" id="o2Step" value="0.1" step="0.1" />
+      </div>
+      <button class="btn" onclick="syncParameters()">Update Stream URL</button>
+    </div>
+
+    <!-- Live Preview -->
+    <div class="card">
+      <h2>Live Value Preview</h2>
+      <label>Current CO₂</label>
+      <div class="live-val" id="dispCo2">0.0%</div>
+
+      <label>Current O₂</label>
+      <div class="live-val" id="dispO2">20.9%</div>
+
+      <button class="btn" onclick="exportStaticJson()">Download Static JSON (100 Steps)</button>
+    </div>
+  </div>
+
+  <!-- HDPlayer Integration URL -->
+  <div class="card">
+    <h2>Huidu HDPlayer Dynamic Data URL</h2>
+    <p style="font-size: 12px; color: var(--text-muted);">
+      Paste this exact link into your HDPlayer Web / Dynamic Text data source:
+    </p>
+    <div class="url-box" id="apiUrlBox">Generating link...</div>
+    <button class="btn" style="width: auto; margin-top: 10px;" onclick="copyUrl()">Copy URL</button>
+  </div>
+
+  <!-- Live JSON Payload -->
+  <div class="card" style="margin-top: 20px;">
+    <h2>Current Payload Response</h2>
+    <pre id="jsonPreview">{}</pre>
+  </div>
+</div>
+
+<script>
+  let startTime = Date.now();
+
+  function getQueryUrl() {
+    const interval = document.getElementById('interval').value;
+    const co2Start = document.getElementById('co2Start').value;
+    const co2Step = document.getElementById('co2Step').value;
+    const o2Start = document.getElementById('o2Start').value;
+    const o2Step = document.getElementById('o2Step').value;
+
+    const base = window.location.origin;
+    return `${base}/api/display-data?interval=${interval}&co2_start=${co2Start}&co2_step=${co2Step}&o2_start=${o2Start}&o2_step=${o2Step}&epoch=${startTime}`;
+  }
+
+  function syncParameters() {
+    startTime = Date.now();
+    const url = getQueryUrl();
+    document.getElementById('apiUrlBox').innerText = url;
+    fetchData();
+  }
+
+  async function fetchData() {
+    try {
+      const url = getQueryUrl();
+      const res = await fetch(url);
+      const data = await res.json();
+      document.getElementById('dispCo2').innerText = data.co2_formatted;
+      document.getElementById('dispO2').innerText = data.o2_formatted;
+      document.getElementById('jsonPreview').innerText = JSON.stringify(data, null, 2);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function copyUrl() {
+    const text = document.getElementById('apiUrlBox').innerText;
+    navigator.clipboard.writeText(text);
+    alert('URL copied to clipboard!');
+  }
+
+  function exportStaticJson() {
+    const interval = parseFloat(document.getElementById('interval').value);
+    const co2Start = parseFloat(document.getElementById('co2Start').value);
+    const co2Step = parseFloat(document.getElementById('co2Step').value);
+    const o2Start = parseFloat(document.getElementById('o2Start').value);
+    const o2Step = parseFloat(document.getElementById('o2Step').value);
+
+    const sequence = [];
+    for (let i = 0; i < 100; i++) {
+      sequence.push({
+        step: i,
+        time_seconds: i * interval,
+        co2: Number((co2Start + i * co2Step).toFixed(2)),
+        o2: Number((o2Start + i * o2Step).toFixed(2))
+      });
+    }
+
+    const blob = new Blob([JSON.stringify(sequence, null, 2)], { type: 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'carbelim_display_sequence.json';
+    link.click();
+  }
+
+  // Update initial UI and poll preview every second
+  window.onload = () => {
+    document.getElementById('apiUrlBox').innerText = getQueryUrl();
+    setInterval(fetchData, 1000);
+  };
+</script>
+</body>
+</html>
