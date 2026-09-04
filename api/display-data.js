@@ -27,11 +27,12 @@ export default function handler(req, res) {
   const cStepCount = Math.floor(elapsedSec / cIntSec);
   const oStepCount = Math.floor(elapsedSec / oIntSec);
 
-  const currentCO2 = parseFloat((cStart + cStepCount * cStep).toFixed(2));
-  const currentO2 = parseFloat((oStart + oStepCount * oStep).toFixed(2));
+  // Calculate the raw internal numbers
+  const rawCO2 = parseFloat((cStart + cStepCount * cStep).toFixed(2));
+  const rawO2 = parseFloat((oStart + oStepCount * oStep).toFixed(2));
 
-  function formatValue(num, unit) {
-    // 1. Keep decimals for numbers under 1,000 (e.g., 0.2g, 999.5l)
+  // Dynamic formatter that handles both with and without units
+  function formatValue(num, unit = '') {
     if (num < 1000) {
       let strNum = Number(num).toLocaleString('fullwide', {useGrouping: false, maximumFractionDigits: 2});
       let allowedLen = 6 - unit.length;
@@ -42,7 +43,6 @@ export default function handler(req, res) {
       return truncated + unit;
     }
 
-    // 2. Drop decimals for large numbers to guarantee space (e.g., 15Lg instead of 15.6Lg)
     let val = num;
     let abbr = '';
 
@@ -59,10 +59,10 @@ export default function handler(req, res) {
 
   return res.status(200).json({
     status: "online",
-    co2: currentCO2,
-    o2: currentO2,
-    co2_formatted: formatValue(currentCO2, 'g'),
-    o2_formatted: formatValue(currentO2, 'l'),
+    co2: formatValue(rawCO2, ''),
+    o2: formatValue(rawO2, ''),
+    co2_formatted: formatValue(rawCO2, 'g'),
+    o2_formatted: formatValue(rawO2, 'l'),
     co2_interval_seconds: cIntSec,
     o2_interval_seconds: oIntSec,
     timestamp: new Date().toISOString()
