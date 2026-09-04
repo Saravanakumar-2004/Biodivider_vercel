@@ -67,7 +67,12 @@
       flex-direction: column; 
     }
     
-    label { font-size: 0.8rem; font-weight: 500; margin-bottom: 0.4rem; color: var(--text-main); }
+    label { 
+      font-size: 0.8rem; 
+      font-weight: 500; 
+      margin-bottom: 0.4rem; 
+      color: var(--text-main); 
+    }
     
     input {
       width: 100%;
@@ -81,8 +86,9 @@
       transition: border-color 0.2s;
     }
     
-    input:focus { border-color: var(--brand); }
-
+    input:focus { 
+      border-color: var(--brand); 
+    }
     .live-preview { display: flex; justify-content: space-around; margin: 2rem 0; text-align: center; }
     .val-box h3 { font-size: 0.85rem; color: var(--text-muted); margin: 0 0 0.5rem 0; font-weight: 500; }
     .val-box .val { font-size: 3rem; font-weight: 700; color: var(--text-main); letter-spacing: -1px; }
@@ -122,24 +128,12 @@
 <div class="container">
   <div class="header">
     <h1>Carbelim Pvt Limited</h1>
-    <p>Fleet Data Stream Engine</p>
+    <p>Data Stream Engine</p>
   </div>
 
   <div class="grid">
     <div class="card">
-      <h2>Device Identification</h2>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Organization</label>
-          <input type="text" id="orgName" value="Carbelim" />
-        </div>
-        <div class="form-group">
-          <label>Device ID</label>
-          <input type="text" id="deviceId" value="DEV-01" />
-        </div>
-      </div>
-
-      <h2 style="margin-top: 1.5rem;">CO₂ Parameters (Grams)</h2>
+      <h2>CO₂ Parameters (Grams)</h2>
       <div class="form-row">
         <div class="form-group">
           <label>Interval (sec)</label>
@@ -171,7 +165,7 @@
         </div>
       </div>
       
-      <button class="btn" onclick="syncParameters()">Generate Unique Device URL</button>
+      <button class="btn" onclick="syncParameters()">Update Engine URL</button>
     </div>
 
     <div class="card">
@@ -186,13 +180,14 @@
           <div class="val" id="dispO2">0l</div>
         </div>
       </div>
+      <button class="btn btn-outline" onclick="exportStaticJson()">Download Static JSON Batch</button>
     </div>
   </div>
 
   <div class="card">
-    <h2>Huidu HDPlayer Device Link</h2>
+    <h2>Huidu HDPlayer Dynamic Link</h2>
     <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
-      Apply this exact link to the assigned hardware. Update ID parameters to create endpoints for multiple screens.
+      Apply this link as your HTTP/Web API Data Source in HDPlayer.
     </p>
     <div class="url-box" id="apiUrlBox">Generating link...</div>
     <button class="btn btn-outline" style="width: auto;" onclick="copyUrl()">Copy URL</button>
@@ -208,8 +203,6 @@
   let startTime = Date.now();
 
   function getQueryUrl() {
-    const org = encodeURIComponent(document.getElementById('orgName').value);
-    const device = encodeURIComponent(document.getElementById('deviceId').value);
     const co2Int = document.getElementById('co2Interval').value;
     const co2Start = document.getElementById('co2Start').value;
     const co2Step = document.getElementById('co2Step').value;
@@ -219,7 +212,7 @@
     const o2Step = document.getElementById('o2Step').value;
 
     const base = window.location.origin;
-    return `${base}/api/display-data?org=${org}&device_id=${device}&co2_interval=${co2Int}&co2_start=${co2Start}&co2_step=${co2Step}&o2_interval=${o2Int}&o2_start=${o2Start}&o2_step=${o2Step}&epoch=${startTime}`;
+    return `${base}/api/display-data?co2_interval=${co2Int}&co2_start=${co2Start}&co2_step=${co2Step}&o2_interval=${o2Int}&o2_start=${o2Start}&o2_step=${o2Step}&epoch=${startTime}`;
   }
 
   function syncParameters() {
@@ -247,6 +240,34 @@
     const text = document.getElementById('apiUrlBox').innerText;
     navigator.clipboard.writeText(text);
     alert('Dynamic URL copied to clipboard.');
+  }
+
+  function exportStaticJson() {
+    const cInt = parseFloat(document.getElementById('co2Interval').value);
+    const cStart = parseFloat(document.getElementById('co2Start').value);
+    const cStep = parseFloat(document.getElementById('co2Step').value);
+    
+    const oInt = parseFloat(document.getElementById('o2Interval').value);
+    const oStart = parseFloat(document.getElementById('o2Start').value);
+    const oStep = parseFloat(document.getElementById('o2Step').value);
+
+    const sequence = [];
+    // Simulates a 100-second timeline running at 1-second ticks
+    for (let sec = 0; sec <= 100; sec++) {
+      const cStepCount = Math.floor(sec / cInt);
+      const oStepCount = Math.floor(sec / oInt);
+      sequence.push({
+        timeline_second: sec,
+        co2_raw: Number((cStart + cStepCount * cStep).toFixed(2)),
+        o2_raw: Number((oStart + oStepCount * oStep).toFixed(2))
+      });
+    }
+
+    const blob = new Blob([JSON.stringify(sequence, null, 2)], { type: 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'carbelim_batch_data.json';
+    link.click();
   }
 
   window.onload = () => {
