@@ -31,6 +31,24 @@ export default function handler(req, res) {
   const currentO2 = parseFloat((oStart + oStepCount * oStep).toFixed(2));
 
   function formatValue(num, unit) {
+    let integerPart = Math.floor(num).toString();
+
+    // 1. If it naturally fits within the 6-character limit (e.g., 99999g is 6 chars)
+    if (integerPart.length + unit.length <= 6) {
+      let strNum = Number(num).toLocaleString('fullwide', {useGrouping: false, maximumFractionDigits: 2});
+      
+      if (strNum.length + unit.length <= 6) {
+        return strNum + unit;
+      } else {
+        // Truncate decimals to force it to fit exactly 6 chars
+        let allowedLen = 6 - unit.length;
+        let truncated = strNum.substring(0, allowedLen);
+        if (truncated.endsWith('.')) truncated = truncated.slice(0, -1);
+        return truncated + unit;
+      }
+    }
+
+    // 2. If it exceeds 6 characters, force Indian numbering compression
     let val = num;
     let abbr = '';
 
@@ -38,22 +56,18 @@ export default function handler(req, res) {
     else if (val >= 100000) { val = val / 100000; abbr = 'L'; }
     else if (val >= 1000) { val = val / 1000; abbr = 'k'; }
 
-    // Force standard decimal format to block scientific notation
-    let valStr = Number(val).toLocaleString('fullwide', { 
-      useGrouping: false, 
-      maximumFractionDigits: 2 
-    });
+    let abbrStr = Number(val).toLocaleString('fullwide', {useGrouping: false, maximumFractionDigits: 2});
+    
+    // 3. Calculate exactly how many characters we have left for the numbers
+    let maxAvailable = 6 - abbr.length - unit.length;
 
-    // Calculate maximum allowed digits to preserve the 6-character hard limit
-    let maxValLen = 6 - abbr.length - unit.length;
-    valStr = valStr.substring(0, maxValLen);
-
-    // Clean up if the truncation leaves a hanging decimal point
-    if (valStr.endsWith('.')) {
-        valStr = valStr.slice(0, -1);
+    // 4. Brutally slice off anything that exceeds the available space
+    let finalStr = abbrStr.substring(0, maxAvailable);
+    if (finalStr.endsWith('.')) {
+      finalStr = finalStr.slice(0, -1);
     }
 
-    return valStr + abbr + unit;
+    return finalStr + abbr + unit;
   }
 
   return res.status(200).json({
